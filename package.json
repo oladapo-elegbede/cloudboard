@@ -1,0 +1,15 @@
+{
+  "name": "cloudboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A production-grade team collaboration platform",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {},
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
