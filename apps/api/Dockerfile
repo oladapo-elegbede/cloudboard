@@ -13,6 +13,8 @@ COPY apps/api ./apps/api
 
 WORKDIR /app/apps/api
 
+RUN npx prisma generate
+
 EXPOSE 3000
 
 USER node

@@ -6,6 +6,7 @@ loadDotenv();
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
   PORT: z.coerce.number().int().positive().max(65535).default(3000),
+  DATABASE_URL: z.string().url().startsWith("postgresql://"),
 });
 
 const parsed = envSchema.safeParse(process.env);
