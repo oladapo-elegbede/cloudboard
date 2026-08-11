@@ -9,8 +9,10 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      DATABASE_URL: postgresql://cloudboard:cloudboard_dev_password@postgres:5432/cloudboard_dev?schema=public
     volumes:
       - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/prisma:/app/apps/api/prisma
       - /app/node_modules
       - /app/apps/api/node_modules
     depends_on:
