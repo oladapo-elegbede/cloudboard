@@ -4,15 +4,8 @@ import { z } from "zod";
 loadDotenv();
 
 const envSchema = z.object({
-  NODE_ENV: z
-    .enum(["development", "production", "test"])
-    .default("development"),
-  PORT: z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(65535)
-    .default(3000),
+  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  PORT: z.coerce.number().int().positive().max(65535).default(3000),
 });
 
 const parsed = envSchema.safeParse(process.env);
