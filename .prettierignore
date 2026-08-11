@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+
+# Generated files
+package-lock.json
+*.tsbuildinfo
+
+# Coverage
+coverage/
+
+# Environment files
+.env
+.env.*
+!.env.example
