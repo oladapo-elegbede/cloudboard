@@ -1,0 +1,37 @@
+# Dependencies (will be installed fresh in the container)
+node_modules
+
+# Build outputs
+dist
+build
+
+# Environment files (secrets stay outside the image)
+.env
+.env.local
+.env.*.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage
+
+# Docker files (do not include themselves)
+Dockerfile
+.dockerignore
+docker-compose.yml
