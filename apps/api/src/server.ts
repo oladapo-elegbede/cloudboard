@@ -2,6 +2,7 @@ import express, { Express, Request, Response } from "express";
 import cors from "cors";
 import { env } from "./config/index.js";
 import { prisma } from "./infrastructure/database/index.js";
+import { authRouter } from "./modules/auth/index.js";
 
 export const createApp = (): Express => {
   const app = express();
@@ -47,6 +48,8 @@ export const createApp = (): Express => {
       });
     }
   });
+
+  app.use("/api/v1/auth", authRouter);
 
   return app;
 };
