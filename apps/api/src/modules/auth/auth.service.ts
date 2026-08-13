@@ -9,6 +9,11 @@ export interface AuthResult {
   refreshToken: string;
 }
 
+export interface RefreshResult {
+  accessToken: string;
+  refreshToken: string;
+}
+
 interface AuthMetadata {
   userAgent?: string | null;
   ipAddress?: string | null;
@@ -18,6 +23,13 @@ export class InvalidCredentialsError extends Error {
   constructor() {
     super("Invalid email or password");
     this.name = "InvalidCredentialsError";
+  }
+}
+
+export class InvalidRefreshTokenError extends Error {
+  constructor() {
+    super("Invalid refresh token");
+    this.name = "InvalidRefreshTokenError";
   }
 }
 
@@ -63,4 +75,62 @@ export const loginUser = async (
   }
 
   return issueTokens(user, metadata);
+};
+
+export const refreshUserSession = async (
+  presentedRefreshToken: string,
+  metadata: AuthMetadata = {},
+): Promise<RefreshResult> => {
+  const tokenHash = authModule.hashRefreshToken(presentedRefreshToken);
+  const storedToken = await authModule.findActiveRefreshTokenByHash(tokenHash);
+
+  if (!storedToken) {
+    throw new InvalidRefreshTokenError();
+  }
+
+  if (storedToken.revokedAt !== null) {
+    throw new InvalidRefreshTokenError();
+  }
+
+  if (storedToken.expiresAt.getTime() <= Date.now()) {
+    throw new InvalidRefreshTokenError();
+  }
+
+  const user = await userService.getUserById(storedToken.userId);
+  if (!user) {
+    throw new InvalidRefreshTokenError();
+  }
+
+  await authModule.revokeRefreshToken(storedToken.id);
+
+  const newAccessToken = authModule.generateAccessToken(user.id, user.email);
+  const newRefreshTokenPair = authModule.generateRefreshToken();
+
+  await authModule.createRefreshToken({
+    userId: user.id,
+    tokenHash: newRefreshTokenPair.hash,
+    expiresAt: authModule.getRefreshTokenExpiryDate(),
+    userAgent: metadata.userAgent,
+    ipAddress: metadata.ipAddress,
+  });
+
+  return {
+    accessToken: newAccessToken,
+    refreshToken: newRefreshTokenPair.token,
+  };
+};
+
+export const logoutSession = async (presentedRefreshToken: string | null): Promise<void> => {
+  if (!presentedRefreshToken) {
+    return;
+  }
+
+  const tokenHash = authModule.hashRefreshToken(presentedRefreshToken);
+  const storedToken = await authModule.findActiveRefreshTokenByHash(tokenHash);
+
+  if (!storedToken || storedToken.revokedAt !== null) {
+    return;
+  }
+
+  await authModule.revokeRefreshToken(storedToken.id);
 };
