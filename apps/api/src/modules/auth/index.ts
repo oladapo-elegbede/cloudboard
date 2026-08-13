@@ -28,3 +28,4 @@ export {
 export type { AuthResult, RefreshResult } from "./auth.service.js";
 export { handleRegister, handleLogin, handleRefresh, handleLogout } from "./auth.controller.js";
 export { authRouter } from "./auth.routes.js";
+export { requireAuth } from "./auth.middleware.js";
