@@ -1,4 +1,4 @@
-import { hashPassword } from "../auth/index.js";
+import { hashPassword, verifyPassword } from "../auth/password.service.js";
 import type { User } from "@prisma/client";
 import type { CreateUserInput, PublicUser } from "./user.types.js";
 import * as userRepository from "./user.repository.js";
@@ -42,4 +42,22 @@ export const createUser = async (input: CreateUserInput): Promise<PublicUser> =>
 export const getUserById = async (id: string): Promise<PublicUser | null> => {
   const user = await userRepository.findUserById(id);
   return user ? toPublicUser(user) : null;
+};
+
+export const verifyUserCredentials = async (
+  email: string,
+  password: string,
+): Promise<PublicUser | null> => {
+  const user = await userRepository.findUserByEmail(email);
+  if (!user) {
+    return null;
+  }
+
+  const isPasswordValid = await verifyPassword(password, user.passwordHash);
+  if (!isPasswordValid) {
+    return null;
+  }
+
+  const updatedUser = await userRepository.updateLastLogin(user.id);
+  return toPublicUser(updatedUser);
 };
