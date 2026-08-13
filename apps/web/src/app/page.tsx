@@ -1,72 +1,78 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-type HealthStatus = "loading" | "healthy" | "unreachable";
-
-interface HealthResponse {
-  success: boolean;
-  data?: {
-    status: string;
-    timestamp: string;
-  };
-}
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../contexts/auth-context";
 
 export default function HomePage() {
-  const [status, setStatus] = useState<HealthStatus>("loading");
-  const [timestamp, setTimestamp] = useState<string | null>(null);
+  const router = useRouter();
+  const { status, user, logout } = useAuth();
 
   useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const response = await fetch("http://localhost:3000/health");
-        const data: HealthResponse = await response.json();
+    if (status === "unauthenticated") {
+      router.replace("/login");
+    }
+  }, [status, router]);
 
-        if (data.success && data.data) {
-          setStatus("healthy");
-          setTimestamp(data.data.timestamp);
-        } else {
-          setStatus("unreachable");
-        }
-      } catch (error) {
-        console.error("Failed to fetch health status:", error);
-        setStatus("unreachable");
-      }
-    };
+  if (status === "loading") {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-gray-400">Loading...</p>
+      </main>
+    );
+  }
 
-    checkHealth();
-  }, []);
+  if (status === "unauthenticated" || !user) {
+    return null;
+  }
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/login");
+  };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-950 text-white p-8">
-      <div className="max-w-2xl w-full space-y-8">
+    <main className="flex min-h-screen flex-col items-center justify-center p-8">
+      <div className="w-full max-w-2xl space-y-8">
         <div className="text-center">
           <h1 className="text-5xl font-bold mb-4">CloudBoard</h1>
-          <p className="text-gray-400 text-lg">Team collaboration platform</p>
+          <p className="text-gray-400 text-lg">Welcome back, {user.name}</p>
         </div>
 
-        <div className="border border-gray-800 rounded-lg p-6 bg-gray-900">
-          <h2 className="text-xl font-semibold mb-4">System Status</h2>
-
-          {status === "loading" && <p className="text-gray-400">Checking API status...</p>}
-
-          {status === "healthy" && (
-            <div className="space-y-2">
-              <p className="text-green-400 font-medium">API is healthy</p>
-              {timestamp && (
-                <p className="text-gray-500 text-sm">
-                  Last checked: {new Date(timestamp).toLocaleString()}
-                </p>
-              )}
+        <div className="border border-gray-800 rounded-lg p-6 bg-gray-900 space-y-4">
+          <h2 className="text-xl font-semibold">Your Account</h2>
+          <div className="space-y-2 text-sm">
+            <div>
+              <span className="text-gray-400">Name:</span>{" "}
+              <span className="text-white">{user.name}</span>
             </div>
-          )}
-
-          {status === "unreachable" && (
-            <p className="text-red-400 font-medium">
-              API is unreachable. Make sure the backend is running.
-            </p>
-          )}
+            <div>
+              <span className="text-gray-400">Email:</span>{" "}
+              <span className="text-white">{user.email}</span>
+            </div>
+            <div>
+              <span className="text-gray-400">Email verified:</span>{" "}
+              <span className="text-white">{user.emailVerified ? "Yes" : "No"}</span>
+            </div>
+            <div>
+              <span className="text-gray-400">Account created:</span>{" "}
+              <span className="text-white">{new Date(user.createdAt).toLocaleString()}</span>
+            </div>
+            {user.lastLoginAt && (
+              <div>
+                <span className="text-gray-400">Last login:</span>{" "}
+                <span className="text-white">{new Date(user.lastLoginAt).toLocaleString()}</span>
+              </div>
+            )}
+          </div>
         </div>
+
+        <button
+          onClick={handleLogout}
+          className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
+        >
+          Log out
+        </button>
       </div>
     </main>
   );
