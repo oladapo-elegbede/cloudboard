@@ -1,8 +1,17 @@
 import express, { Express, Request, Response } from "express";
+import cors from "cors";
+import { env } from "./config/index.js";
 import { prisma } from "./infrastructure/database/index.js";
 
 export const createApp = (): Express => {
   const app = express();
+
+  app.use(
+    cors({
+      origin: env.ALLOWED_ORIGINS,
+      credentials: true,
+    }),
+  );
 
   app.get("/health", (_req: Request, res: Response) => {
     res.status(200).json({
