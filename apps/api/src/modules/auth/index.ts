@@ -15,3 +15,9 @@ export {
   revokeAllUserRefreshTokens,
   deleteExpiredRefreshTokens,
 } from "./refresh-token.repository.js";
+export { registerSchema } from "./auth.schemas.js";
+export type { RegisterInput } from "./auth.schemas.js";
+export { registerUser } from "./auth.service.js";
+export type { AuthResult } from "./auth.service.js";
+export { handleRegister } from "./auth.controller.js";
+export { authRouter } from "./auth.routes.js";
