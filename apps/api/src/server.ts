@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { env } from "./config/index.js";
 import { prisma } from "./infrastructure/database/index.js";
 import { authRouter } from "./modules/auth/index.js";
+import { userRouter } from "./modules/users/index.js";
 
 export const createApp = (): Express => {
   const app = express();
@@ -52,6 +53,7 @@ export const createApp = (): Express => {
   });
 
   app.use("/api/v1/auth", authRouter);
+  app.use("/api/v1/users", userRouter);
 
   return app;
 };
