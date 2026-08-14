@@ -1,5 +1,8 @@
 import * as userService from "../users/index.js";
 import * as authModule from "./index.js";
+import { createPersonalOrganization } from "../organizations/organization.service.js";
+import { prisma } from "../../infrastructure/database/prisma.js";
+import { hashPassword } from "./password.service.js";
 import type { RegisterInput, LoginInput } from "./auth.schemas.js";
 import type { PublicUser } from "../users/index.js";
 
@@ -33,6 +36,24 @@ export class InvalidRefreshTokenError extends Error {
   }
 }
 
+const toPublicUser = (user: {
+  id: string;
+  email: string;
+  name: string;
+  emailVerified: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  lastLoginAt: Date | null;
+}): PublicUser => ({
+  id: user.id,
+  email: user.email,
+  name: user.name,
+  emailVerified: user.emailVerified,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+  lastLoginAt: user.lastLoginAt,
+});
+
 const issueTokens = async (user: PublicUser, metadata: AuthMetadata): Promise<AuthResult> => {
   const accessToken = authModule.generateAccessToken(user.id, user.email);
   const refreshTokenPair = authModule.generateRefreshToken();
@@ -56,13 +77,28 @@ export const registerUser = async (
   input: RegisterInput,
   metadata: AuthMetadata = {},
 ): Promise<AuthResult> => {
-  const user = await userService.createUser({
-    email: input.email,
-    password: input.password,
-    name: input.name,
+  const existingUser = await prisma.user.findUnique({ where: { email: input.email } });
+  if (existingUser) {
+    throw new userService.UserAlreadyExistsError(input.email);
+  }
+
+  const passwordHash = await hashPassword(input.password);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const createdUser = await tx.user.create({
+      data: {
+        email: input.email,
+        passwordHash,
+        name: input.name,
+      },
+    });
+
+    await createPersonalOrganization(createdUser.id, createdUser.name, tx);
+
+    return createdUser;
   });
 
-  return issueTokens(user, metadata);
+  return issueTokens(toPublicUser(user), metadata);
 };
 
 export const loginUser = async (
