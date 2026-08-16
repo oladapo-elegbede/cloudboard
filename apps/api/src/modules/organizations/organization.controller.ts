@@ -11,6 +11,7 @@ import {
   NotOrganizationMemberError,
   UserNotFoundError,
   MembershipAlreadyExistsError,
+  CannotRemoveLastOwnerError,
 } from "./organization.service.js";
 
 const requireAuthenticatedUser = (
@@ -149,30 +150,16 @@ export const handleGetOrganization = async (req: Request, res: Response): Promis
 };
 
 export const handleListMembers = async (req: Request, res: Response): Promise<void> => {
-  const user = requireAuthenticatedUser(req, res);
-  if (!user) return;
-
   const organizationId = getStringParam(req, res, "id");
   if (!organizationId) return;
 
   try {
-    const members = await listOrganizationMembers(user.sub, organizationId);
+    const members = await listOrganizationMembers(organizationId);
     res.status(200).json({
       success: true,
       data: { members },
     });
   } catch (error) {
-    if (error instanceof NotOrganizationMemberError) {
-      res.status(403).json({
-        success: false,
-        error: {
-          code: "NOT_MEMBER",
-          message: error.message,
-        },
-      });
-      return;
-    }
-
     console.error("List members failed:", error);
     res.status(500).json({
       success: false,
@@ -185,9 +172,6 @@ export const handleListMembers = async (req: Request, res: Response): Promise<vo
 };
 
 export const handleInviteMember = async (req: Request, res: Response): Promise<void> => {
-  const user = requireAuthenticatedUser(req, res);
-  if (!user) return;
-
   const organizationId = getStringParam(req, res, "id");
   if (!organizationId) return;
 
@@ -205,22 +189,12 @@ export const handleInviteMember = async (req: Request, res: Response): Promise<v
   }
 
   try {
-    const membership = await inviteMember(user.sub, organizationId, parseResult.data);
+    const membership = await inviteMember(organizationId, parseResult.data);
     res.status(201).json({
       success: true,
       data: { membership },
     });
   } catch (error) {
-    if (error instanceof NotOrganizationMemberError) {
-      res.status(403).json({
-        success: false,
-        error: {
-          code: "NOT_MEMBER",
-          message: error.message,
-        },
-      });
-      return;
-    }
     if (error instanceof UserNotFoundError) {
       res.status(404).json({
         success: false,
@@ -254,9 +228,6 @@ export const handleInviteMember = async (req: Request, res: Response): Promise<v
 };
 
 export const handleRemoveMember = async (req: Request, res: Response): Promise<void> => {
-  const user = requireAuthenticatedUser(req, res);
-  if (!user) return;
-
   const organizationId = getStringParam(req, res, "id");
   if (!organizationId) return;
 
@@ -264,17 +235,17 @@ export const handleRemoveMember = async (req: Request, res: Response): Promise<v
   if (!memberUserId) return;
 
   try {
-    await removeMember(user.sub, organizationId, memberUserId);
+    await removeMember(organizationId, memberUserId);
     res.status(200).json({
       success: true,
       data: { message: "Member removed successfully" },
     });
   } catch (error) {
-    if (error instanceof NotOrganizationMemberError) {
-      res.status(403).json({
+    if (error instanceof CannotRemoveLastOwnerError) {
+      res.status(400).json({
         success: false,
         error: {
-          code: "NOT_MEMBER",
+          code: "CANNOT_REMOVE_LAST_OWNER",
           message: error.message,
         },
       });

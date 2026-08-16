@@ -25,6 +25,7 @@ export {
   NotOrganizationMemberError,
   UserNotFoundError,
   MembershipAlreadyExistsError,
+  CannotRemoveLastOwnerError,
 } from "./organization.service.js";
 
 export {
@@ -36,4 +37,5 @@ export {
   handleRemoveMember,
 } from "./organization.controller.js";
 
+export { requireMembership, requireRole } from "./authorization.middleware.js";
 export { organizationRouter } from "./organization.routes.js";

@@ -38,6 +38,13 @@ export class MembershipAlreadyExistsError extends Error {
   }
 }
 
+export class CannotRemoveLastOwnerError extends Error {
+  constructor() {
+    super("Cannot remove the last owner of the organization");
+    this.name = "CannotRemoveLastOwnerError";
+  }
+}
+
 const toPublicOrganization = (organization: Organization): PublicOrganization => ({
   id: organization.id,
   name: organization.name,
@@ -144,14 +151,8 @@ export const getOrganizationForUser = async (
 };
 
 export const listOrganizationMembers = async (
-  userId: string,
   organizationId: string,
 ): Promise<MembershipWithUser[]> => {
-  const membership = await membershipRepository.findMembership(userId, organizationId);
-  if (!membership) {
-    throw new NotOrganizationMemberError();
-  }
-
   const members = await membershipRepository.findOrganizationMembers(organizationId);
   return members.map((m) => ({
     ...toPublicMembership(m),
@@ -160,15 +161,9 @@ export const listOrganizationMembers = async (
 };
 
 export const inviteMember = async (
-  inviterId: string,
   organizationId: string,
   input: InviteMemberInput,
 ): Promise<PublicMembership> => {
-  const inviterMembership = await membershipRepository.findMembership(inviterId, organizationId);
-  if (!inviterMembership) {
-    throw new NotOrganizationMemberError();
-  }
-
   const invitedUser = await prisma.user.findUnique({
     where: { email: input.email },
   });
@@ -193,19 +188,18 @@ export const inviteMember = async (
   return toPublicMembership(membership);
 };
 
-export const removeMember = async (
-  removerId: string,
-  organizationId: string,
-  memberUserId: string,
-): Promise<void> => {
-  const removerMembership = await membershipRepository.findMembership(removerId, organizationId);
-  if (!removerMembership) {
-    throw new NotOrganizationMemberError();
-  }
-
+export const removeMember = async (organizationId: string, memberUserId: string): Promise<void> => {
   const targetMembership = await membershipRepository.findMembership(memberUserId, organizationId);
   if (!targetMembership) {
     return;
+  }
+
+  if (targetMembership.role === "OWNER") {
+    const allMembers = await membershipRepository.findOrganizationMembers(organizationId);
+    const ownerCount = allMembers.filter((m) => m.role === "OWNER").length;
+    if (ownerCount <= 1) {
+      throw new CannotRemoveLastOwnerError();
+    }
   }
 
   await membershipRepository.deleteMembership(targetMembership.id);
