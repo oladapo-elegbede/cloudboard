@@ -2,10 +2,11 @@ import express, { Express, Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { env } from "./config/index.js";
-import { prisma } from "./infrastructure/database/index.js";
+import { prisma } from "./infrastructure/database/prisma.js";
 import { authRouter } from "./modules/auth/index.js";
 import { userRouter } from "./modules/users/index.js";
 import { organizationRouter } from "./modules/organizations/index.js";
+import { boardRouter, organizationBoardRouter } from "./modules/boards/index.js";
 
 export const createApp = (): Express => {
   const app = express();
@@ -56,6 +57,8 @@ export const createApp = (): Express => {
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/users", userRouter);
   app.use("/api/v1/organizations", organizationRouter);
+  app.use("/api/v1/organizations/:id/boards", organizationBoardRouter);
+  app.use("/api/v1/boards", boardRouter);
 
   return app;
 };

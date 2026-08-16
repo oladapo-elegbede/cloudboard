@@ -20,17 +20,18 @@ model HealthCheck {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
+  id            String    @id @default(uuid())
+  email         String    @unique
   passwordHash  String
   name          String
-  emailVerified Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   lastLoginAt   DateTime?
 
   refreshTokens RefreshToken[]
   memberships   Membership[]
+  createdBoards Board[]        @relation("BoardCreator")
 
   @@index([email])
 }
@@ -59,6 +60,7 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   memberships Membership[]
+  boards      Board[]
 
   @@index([slug])
 }
@@ -76,4 +78,21 @@ model Membership {
   @@unique([userId, organizationId])
   @@index([userId])
   @@index([organizationId])
+}
+
+model Board {
+  id             String    @id @default(uuid())
+  name           String
+  description    String?
+  organizationId String
+  createdById    String?
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("BoardCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([archivedAt])
 }
