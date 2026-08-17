@@ -22,6 +22,7 @@ export {
   ColumnNotFoundError,
   ColumnBoardMismatchError,
   InvalidColumnPositionError,
+  ColumnNotEmptyError,
 } from "./column.service.js";
 
 export { requireColumnAccess, requireColumnRole } from "./column.middleware.js";

@@ -1,6 +1,7 @@
 import type { BoardColumn } from "@prisma/client";
 import { generateKeyBetween } from "fractional-indexing";
 import * as columnRepository from "./column.repository.js";
+import { countTasksByColumn } from "../tasks/task.repository.js";
 import type {
   PublicColumn,
   CreateColumnInput,
@@ -26,6 +27,15 @@ export class InvalidColumnPositionError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "InvalidColumnPositionError";
+  }
+}
+
+export class ColumnNotEmptyError extends Error {
+  public readonly taskCount: number;
+  constructor(taskCount: number) {
+    super(`Cannot delete column with ${taskCount} task(s). Move or delete tasks first.`);
+    this.name = "ColumnNotEmptyError";
+    this.taskCount = taskCount;
   }
 }
 
@@ -144,5 +154,11 @@ export const deleteColumn = async (columnId: string): Promise<void> => {
   if (!existing) {
     throw new ColumnNotFoundError(columnId);
   }
+
+  const taskCount = await countTasksByColumn(columnId);
+  if (taskCount > 0) {
+    throw new ColumnNotEmptyError(taskCount);
+  }
+
   await columnRepository.deleteColumn(columnId);
 };

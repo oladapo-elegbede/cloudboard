@@ -9,6 +9,7 @@ import {
   ColumnNotFoundError,
   ColumnBoardMismatchError,
   InvalidColumnPositionError,
+  ColumnNotEmptyError,
 } from "./column.service.js";
 
 const getStringParam = (req: Request, res: Response, paramName: string): string | null => {
@@ -167,6 +168,17 @@ export const handleDeleteColumn = async (req: Request, res: Response): Promise<v
       res.status(404).json({
         success: false,
         error: { code: "COLUMN_NOT_FOUND", message: error.message },
+      });
+      return;
+    }
+    if (error instanceof ColumnNotEmptyError) {
+      res.status(409).json({
+        success: false,
+        error: {
+          code: "COLUMN_NOT_EMPTY",
+          message: error.message,
+          details: { taskCount: error.taskCount },
+        },
       });
       return;
     }
