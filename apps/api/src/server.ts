@@ -9,6 +9,7 @@ import { organizationRouter } from "./modules/organizations/index.js";
 import { boardRouter, organizationBoardRouter } from "./modules/boards/index.js";
 import { boardColumnRouter, columnRouter } from "./modules/columns/index.js";
 import { columnTaskRouter, taskRouter } from "./modules/tasks/index.js";
+import { taskCommentRouter, commentRouter } from "./modules/comments/index.js";
 
 export const createApp = (): Express => {
   const app = express();
@@ -65,6 +66,8 @@ export const createApp = (): Express => {
   app.use("/api/v1/columns", columnRouter);
   app.use("/api/v1/columns/:id/tasks", columnTaskRouter);
   app.use("/api/v1/tasks", taskRouter);
+  app.use("/api/v1/tasks/:id/comments", taskCommentRouter);
+  app.use("/api/v1/comments", commentRouter);
 
   return app;
 };
