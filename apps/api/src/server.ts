@@ -8,6 +8,7 @@ import { userRouter } from "./modules/users/index.js";
 import { organizationRouter } from "./modules/organizations/index.js";
 import { boardRouter, organizationBoardRouter } from "./modules/boards/index.js";
 import { boardColumnRouter, columnRouter } from "./modules/columns/index.js";
+import { columnTaskRouter, taskRouter } from "./modules/tasks/index.js";
 
 export const createApp = (): Express => {
   const app = express();
@@ -62,6 +63,8 @@ export const createApp = (): Express => {
   app.use("/api/v1/boards", boardRouter);
   app.use("/api/v1/boards/:id/columns", boardColumnRouter);
   app.use("/api/v1/columns", columnRouter);
+  app.use("/api/v1/columns/:id/tasks", columnTaskRouter);
+  app.use("/api/v1/tasks", taskRouter);
 
   return app;
 };
