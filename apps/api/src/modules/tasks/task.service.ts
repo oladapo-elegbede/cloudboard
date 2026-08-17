@@ -2,6 +2,10 @@ import type { Task } from "@prisma/client";
 import { generateKeyBetween } from "fractional-indexing";
 import * as taskRepository from "./task.repository.js";
 import { findColumnById } from "../columns/column.repository.js";
+import { findBoardById } from "../boards/board.repository.js";
+import { prisma } from "../../infrastructure/database/prisma.js";
+import { logActivity, ACTION_TYPES, ENTITY_TYPES } from "../activities/index.js";
+import type { ActivitySnapshot } from "../activities/index.js";
 import type { PublicTask, CreateTaskInput, UpdateTaskInput, MoveTaskInput } from "./task.types.js";
 
 export class TaskNotFoundError extends Error {
@@ -84,6 +88,36 @@ const calculateTaskPosition = async (
   }
 };
 
+const resolveBoardAndOrg = async (
+  columnId: string,
+): Promise<{ boardId: string; organizationId: string } | null> => {
+  const column = await findColumnById(columnId);
+  if (!column) return null;
+  const board = await findBoardById(column.boardId);
+  if (!board) return null;
+  return { boardId: board.id, organizationId: board.organizationId };
+};
+
+const getUserName = async (userId: string): Promise<string> => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true },
+  });
+  return user?.name ?? "Unknown user";
+};
+
+const serializeUpdateChanges = (input: UpdateTaskInput): ActivitySnapshot => {
+  const changes: Record<string, unknown> = {};
+  if (input.title !== undefined) changes.title = input.title;
+  if (input.description !== undefined) changes.description = input.description;
+  if (input.assigneeId !== undefined) changes.assigneeId = input.assigneeId;
+  if (input.dueDate !== undefined) {
+    changes.dueDate = input.dueDate ? input.dueDate.toISOString() : null;
+  }
+  if (input.priority !== undefined) changes.priority = input.priority;
+  return changes as ActivitySnapshot;
+};
+
 export const createTask = async (
   columnId: string,
   createdById: string,
@@ -107,6 +141,25 @@ export const createTask = async (
     priority: input.priority ?? null,
   });
 
+  const context = await resolveBoardAndOrg(columnId);
+  if (context) {
+    const actorName = await getUserName(createdById);
+    await logActivity({
+      organizationId: context.organizationId,
+      boardId: context.boardId,
+      actorId: createdById,
+      actorName,
+      actionType: ACTION_TYPES.TASK_CREATED,
+      entityType: ENTITY_TYPES.TASK,
+      entityId: task.id,
+      entitySnapshot: {
+        title: task.title,
+        columnId: task.columnId,
+        priority: task.priority ?? null,
+      },
+    });
+  }
+
   return toPublicTask(task);
 };
 
@@ -123,16 +176,43 @@ export const getTask = async (taskId: string): Promise<PublicTask> => {
   return toPublicTask(task);
 };
 
-export const updateTask = async (taskId: string, input: UpdateTaskInput): Promise<PublicTask> => {
+export const updateTask = async (
+  taskId: string,
+  actorId: string,
+  input: UpdateTaskInput,
+): Promise<PublicTask> => {
   const existing = await taskRepository.findTaskById(taskId);
   if (!existing) {
     throw new TaskNotFoundError(taskId);
   }
   const task = await taskRepository.updateTask(taskId, input);
+
+  const context = await resolveBoardAndOrg(existing.columnId);
+  if (context) {
+    const actorName = await getUserName(actorId);
+    await logActivity({
+      organizationId: context.organizationId,
+      boardId: context.boardId,
+      actorId,
+      actorName,
+      actionType: ACTION_TYPES.TASK_UPDATED,
+      entityType: ENTITY_TYPES.TASK,
+      entityId: task.id,
+      entitySnapshot: {
+        title: task.title,
+        changes: serializeUpdateChanges(input),
+      },
+    });
+  }
+
   return toPublicTask(task);
 };
 
-export const moveTask = async (taskId: string, input: MoveTaskInput): Promise<PublicTask> => {
+export const moveTask = async (
+  taskId: string,
+  actorId: string,
+  input: MoveTaskInput,
+): Promise<PublicTask> => {
   const existing = await taskRepository.findTaskById(taskId);
   if (!existing) {
     throw new TaskNotFoundError(taskId);
@@ -162,13 +242,53 @@ export const moveTask = async (taskId: string, input: MoveTaskInput): Promise<Pu
     position,
   });
 
+  const context = await resolveBoardAndOrg(targetColumnId);
+  if (context) {
+    const actorName = await getUserName(actorId);
+    await logActivity({
+      organizationId: context.organizationId,
+      boardId: context.boardId,
+      actorId,
+      actorName,
+      actionType: ACTION_TYPES.TASK_MOVED,
+      entityType: ENTITY_TYPES.TASK,
+      entityId: task.id,
+      entitySnapshot: {
+        title: task.title,
+        fromColumnId: existing.columnId,
+        toColumnId: targetColumnId,
+      },
+    });
+  }
+
   return toPublicTask(task);
 };
 
-export const deleteTask = async (taskId: string): Promise<void> => {
+export const deleteTask = async (taskId: string, actorId: string): Promise<void> => {
   const existing = await taskRepository.findTaskById(taskId);
   if (!existing) {
     throw new TaskNotFoundError(taskId);
   }
+
+  const context = await resolveBoardAndOrg(existing.columnId);
+  const actorName = context ? await getUserName(actorId) : "Unknown user";
+
   await taskRepository.deleteTask(taskId);
+
+  if (context) {
+    await logActivity({
+      organizationId: context.organizationId,
+      boardId: context.boardId,
+      actorId,
+      actorName,
+      actionType: ACTION_TYPES.TASK_DELETED,
+      entityType: ENTITY_TYPES.TASK,
+      entityId: existing.id,
+      entitySnapshot: {
+        title: existing.title,
+        description: existing.description ?? null,
+        columnId: existing.columnId,
+      },
+    });
+  }
 };
