@@ -41,6 +41,7 @@ model User {
   createdTasks   Task[]         @relation("TaskCreator")
   assignedTasks  Task[]         @relation("TaskAssignee")
   comments       Comment[]      @relation("CommentAuthor")
+  activities     Activity[]     @relation("ActivityActor")
 
   @@index([email])
 }
@@ -70,6 +71,7 @@ model Organization {
 
   memberships Membership[]
   boards      Board[]
+  activities  Activity[]
 
   @@index([slug])
 }
@@ -102,6 +104,7 @@ model Board {
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdBy    User?         @relation("BoardCreator", fields: [createdById], references: [id], onDelete: SetNull)
   columns      BoardColumn[]
+  activities   Activity[]
 
   @@index([organizationId])
   @@index([archivedAt])
@@ -160,4 +163,25 @@ model Comment {
   @@index([taskId])
   @@index([taskId, createdAt])
   @@index([authorId])
+}
+
+model Activity {
+  id             String   @id @default(uuid())
+  organizationId String
+  boardId        String?
+  actorId        String?
+  actorName      String
+  actionType     String
+  entityType     String
+  entityId       String
+  entitySnapshot Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  board        Board?       @relation(fields: [boardId], references: [id], onDelete: SetNull)
+  actor        User?        @relation("ActivityActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, boardId, createdAt(sort: Desc)])
+  @@index([boardId, createdAt(sort: Desc)])
+  @@index([actorId])
 }

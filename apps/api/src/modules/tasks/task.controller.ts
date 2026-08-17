@@ -65,14 +65,20 @@ const handleTaskError = (res: Response, error: unknown): boolean => {
   return false;
 };
 
-export const handleCreateTask = async (req: Request, res: Response): Promise<void> => {
+const requireAuthUser = (req: Request, res: Response): { sub: string } | null => {
   if (!req.user) {
     res.status(401).json({
       success: false,
       error: { code: "NOT_AUTHENTICATED", message: "Authentication required" },
     });
-    return;
+    return null;
   }
+  return req.user;
+};
+
+export const handleCreateTask = async (req: Request, res: Response): Promise<void> => {
+  const user = requireAuthUser(req, res);
+  if (!user) return;
 
   const columnId = getStringParam(req, res, "id");
   if (!columnId) return;
@@ -91,7 +97,7 @@ export const handleCreateTask = async (req: Request, res: Response): Promise<voi
   }
 
   try {
-    const task = await createTask(columnId, req.user.sub, parseResult.data);
+    const task = await createTask(columnId, user.sub, parseResult.data);
     res.status(201).json({ success: true, data: { task } });
   } catch (error) {
     if (handleTaskError(res, error)) return;
@@ -125,6 +131,9 @@ export const handleGetTask = async (req: Request, res: Response): Promise<void> 
 };
 
 export const handleUpdateTask = async (req: Request, res: Response): Promise<void> => {
+  const user = requireAuthUser(req, res);
+  if (!user) return;
+
   const taskId = getStringParam(req, res, "id");
   if (!taskId) return;
 
@@ -142,7 +151,7 @@ export const handleUpdateTask = async (req: Request, res: Response): Promise<voi
   }
 
   try {
-    const task = await updateTask(taskId, parseResult.data);
+    const task = await updateTask(taskId, user.sub, parseResult.data);
     res.status(200).json({ success: true, data: { task } });
   } catch (error) {
     if (handleTaskError(res, error)) return;
@@ -151,6 +160,9 @@ export const handleUpdateTask = async (req: Request, res: Response): Promise<voi
 };
 
 export const handleMoveTask = async (req: Request, res: Response): Promise<void> => {
+  const user = requireAuthUser(req, res);
+  if (!user) return;
+
   const taskId = getStringParam(req, res, "id");
   if (!taskId) return;
 
@@ -168,7 +180,7 @@ export const handleMoveTask = async (req: Request, res: Response): Promise<void>
   }
 
   try {
-    const task = await moveTask(taskId, parseResult.data);
+    const task = await moveTask(taskId, user.sub, parseResult.data);
     res.status(200).json({ success: true, data: { task } });
   } catch (error) {
     if (handleTaskError(res, error)) return;
@@ -177,11 +189,14 @@ export const handleMoveTask = async (req: Request, res: Response): Promise<void>
 };
 
 export const handleDeleteTask = async (req: Request, res: Response): Promise<void> => {
+  const user = requireAuthUser(req, res);
+  if (!user) return;
+
   const taskId = getStringParam(req, res, "id");
   if (!taskId) return;
 
   try {
-    await deleteTask(taskId);
+    await deleteTask(taskId, user.sub);
     res.status(200).json({
       success: true,
       data: { message: "Task deleted successfully" },
