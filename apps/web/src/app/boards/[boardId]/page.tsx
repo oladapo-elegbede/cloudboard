@@ -1,12 +1,24 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  DndContext,
+  closestCorners,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from "@dnd-kit/core";
+import type { DragStartEvent, DragEndEvent, DragOverEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "../../../contexts/auth-context";
 import { getBoard, listBoardTasks } from "../../../lib/boards-api";
 import { listBoardColumns } from "../../../lib/columns-api";
+import { moveTask } from "../../../lib/tasks-api";
 import { ApiError } from "../../../lib/api-client";
 import { LoadingState } from "../../../components/LoadingState";
 import { ErrorState } from "../../../components/ErrorState";
@@ -30,7 +42,6 @@ const getDueDateStatus = (dueDate: string | null): DueDateStatus => {
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-
   if (due < today) return "overdue";
   if (due < tomorrow) return "today";
   return "future";
@@ -60,11 +71,10 @@ const PriorityBadge = ({ priority }: { priority: TaskPriority }) => {
   );
 };
 
-const TaskCard = ({ task }: { task: PublicTask }) => {
+const TaskCardContent = ({ task }: { task: PublicTask }) => {
   const dueDateStatus = getDueDateStatus(task.dueDate);
-
   return (
-    <div className="rounded-md border border-gray-700 bg-gray-800 p-3 shadow-sm">
+    <>
       <p className="text-sm font-medium text-white">{task.title}</p>
       <div className="mt-2 flex items-center gap-2">
         {task.priority && <PriorityBadge priority={task.priority} />}
@@ -74,6 +84,31 @@ const TaskCard = ({ task }: { task: PublicTask }) => {
           </span>
         )}
       </div>
+    </>
+  );
+};
+
+const SortableTaskCard = ({ task }: { task: PublicTask }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: task.id,
+    data: { type: "task", task },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab rounded-md border border-gray-700 bg-gray-800 p-3 shadow-sm active:cursor-grabbing"
+    >
+      <TaskCardContent task={task} />
     </div>
   );
 };
@@ -83,6 +118,16 @@ export default function BoardDetailPage() {
   const params = useParams();
   const boardId = typeof params.boardId === "string" ? params.boardId : "";
   const { status, accessToken } = useAuth();
+  const queryClient = useQueryClient();
+  const [activeTask, setActiveTask] = useState<PublicTask | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+  );
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -119,6 +164,86 @@ export default function BoardDetailPage() {
     }
     return grouped;
   }, [tasksQuery.data]);
+
+  const moveMutation = useMutation({
+    mutationFn: (vars: {
+      taskId: string;
+      targetColumnId?: string;
+      afterTaskId?: string;
+      beforeTaskId?: string;
+    }) =>
+      moveTask(accessToken as string, vars.taskId, {
+        targetColumnId: vars.targetColumnId,
+        afterTaskId: vars.afterTaskId,
+        beforeTaskId: vars.beforeTaskId,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["boardTasks", boardId] });
+    },
+    onError: (err) => {
+      console.error("Move task failed:", err);
+      queryClient.invalidateQueries({ queryKey: ["boardTasks", boardId] });
+    },
+  });
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const { active } = event;
+    const taskData = active.data.current;
+    if (taskData?.type === "task") {
+      setActiveTask(taskData.task as PublicTask);
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveTask(null);
+      const { active, over } = event;
+
+      if (!over || active.id === over.id) return;
+
+      const activeTaskData = active.data.current;
+      if (!activeTaskData || activeTaskData.type !== "task") return;
+
+      const draggedTask = activeTaskData.task as PublicTask;
+      const overId = over.id as string;
+      const overData = over.data.current;
+
+      let targetColumnId: string | undefined;
+      let afterTaskId: string | undefined;
+      let beforeTaskId: string | undefined;
+
+      if (overData?.type === "task") {
+        const overTask = overData.task as PublicTask;
+        targetColumnId = overTask.columnId !== draggedTask.columnId ? overTask.columnId : undefined;
+
+        const columnTasks = tasksByColumn[overTask.columnId] ?? [];
+        const overIndex = columnTasks.findIndex((t) => t.id === overTask.id);
+
+        if (overIndex > 0) {
+          const taskAbove = columnTasks[overIndex - 1];
+          if (taskAbove && taskAbove.id !== draggedTask.id) {
+            afterTaskId = taskAbove.id;
+          }
+        }
+        beforeTaskId = overTask.id !== draggedTask.id ? overTask.id : undefined;
+      } else if (overData?.type === "column") {
+        const columnId = overId;
+        if (columnId !== draggedTask.columnId) {
+          targetColumnId = columnId;
+        }
+      }
+
+      if (targetColumnId || afterTaskId || beforeTaskId) {
+        moveMutation.mutate({
+          taskId: draggedTask.id,
+          targetColumnId,
+          afterTaskId,
+          beforeTaskId,
+        });
+      }
+    },
+    [tasksByColumn, moveMutation],
+  );
 
   if (status === "loading" || status === "unauthenticated") {
     return (
@@ -197,33 +322,56 @@ export default function BoardDetailPage() {
         )}
 
         {columnsQuery.isSuccess && columnsQuery.data.length > 0 && (
-          <div className="flex gap-4" style={{ minWidth: "fit-content" }}>
-            {columnsQuery.data.map((column) => {
-              const columnTasks = tasksByColumn[column.id] ?? [];
-              return (
-                <div
-                  key={column.id}
-                  className="flex w-80 shrink-0 flex-col rounded-lg border border-gray-800 bg-gray-900/50"
-                >
-                  <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-                    <h3 className="text-sm font-semibold text-gray-200">{column.name}</h3>
-                    <span className="text-xs text-gray-500">{columnTasks.length}</span>
-                  </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex gap-4" style={{ minWidth: "fit-content" }}>
+              {columnsQuery.data.map((column) => {
+                const columnTasks = tasksByColumn[column.id] ?? [];
+                const taskIds = columnTasks.map((t) => t.id);
 
-                  <div className="flex-1 space-y-2 overflow-y-auto p-3">
-                    {columnTasks.length === 0 && (
-                      <p className="py-4 text-center text-xs text-gray-600">No tasks</p>
-                    )}
-                    {columnTasks.map((task) => (
-                      <TaskCard key={task.id} task={task} />
-                    ))}
-                    <CreateTaskForm columnId={column.id} boardId={boardId} />
+                return (
+                  <div
+                    key={column.id}
+                    className="flex w-80 shrink-0 flex-col rounded-lg border border-gray-800 bg-gray-900/50"
+                  >
+                    <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
+                      <h3 className="text-sm font-semibold text-gray-200">{column.name}</h3>
+                      <span className="text-xs text-gray-500">{columnTasks.length}</span>
+                    </div>
+
+                    <SortableContext
+                      items={taskIds}
+                      strategy={verticalListSortingStrategy}
+                      id={column.id}
+                    >
+                      <div className="flex-1 space-y-2 overflow-y-auto p-3 min-h-[60px]">
+                        {columnTasks.length === 0 && !activeTask && (
+                          <p className="py-4 text-center text-xs text-gray-600">No tasks</p>
+                        )}
+                        {columnTasks.map((task) => (
+                          <SortableTaskCard key={task.id} task={task} />
+                        ))}
+                        <CreateTaskForm columnId={column.id} boardId={boardId} />
+                      </div>
+                    </SortableContext>
                   </div>
+                );
+              })}
+              <CreateColumnForm boardId={boardId} />
+            </div>
+
+            <DragOverlay>
+              {activeTask ? (
+                <div className="w-80 rounded-md border border-blue-500 bg-gray-800 p-3 shadow-lg">
+                  <TaskCardContent task={activeTask} />
                 </div>
-              );
-            })}
-            <CreateColumnForm boardId={boardId} />
-          </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
         )}
       </div>
     </main>
