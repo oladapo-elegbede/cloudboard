@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
 import { env } from "./config/index.js";
 import { prisma } from "./infrastructure/database/prisma.js";
 import { authRouter } from "./modules/auth/index.js";
@@ -11,6 +12,7 @@ import { boardColumnRouter, columnRouter } from "./modules/columns/index.js";
 import { columnTaskRouter, boardTaskRouter, taskRouter } from "./modules/tasks/index.js";
 import { taskCommentRouter, commentRouter } from "./modules/comments/index.js";
 import { boardActivityRouter } from "./modules/activities/index.js";
+import openApiSpec from "./openapi.json" with { type: "json" };
 
 export const createApp = (): Express => {
   const app = express();
@@ -24,6 +26,8 @@ export const createApp = (): Express => {
 
   app.use(express.json());
   app.use(cookieParser());
+
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
   app.get("/health", (_req: Request, res: Response) => {
     res.status(200).json({
