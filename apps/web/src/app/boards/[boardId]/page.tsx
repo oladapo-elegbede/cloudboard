@@ -26,6 +26,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import { CreateColumnForm } from "../../../components/CreateColumnForm";
 import { CreateTaskForm } from "../../../components/CreateTaskForm";
 import { TaskDetailModal } from "../../../components/TaskDetailModal";
+import { ActivityFeed } from "../../../components/ActivityFeed";
 import type { PublicTask, TaskPriority } from "../../../lib/boards-api";
 
 const priorityConfig: Record<string, { label: string; className: string }> = {
@@ -135,6 +136,7 @@ export default function BoardDetailPage() {
   const queryClient = useQueryClient();
   const [activeTask, setActiveTask] = useState<PublicTask | null>(null);
   const [selectedTask, setSelectedTask] = useState<PublicTask | null>(null);
+  const [showActivity, setShowActivity] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -299,101 +301,123 @@ export default function BoardDetailPage() {
   return (
     <main className="flex h-screen flex-col overflow-hidden">
       <header className="shrink-0 border-b border-gray-800 px-6 py-4">
-        <Link
-          href={boardQuery.data ? `/organizations/${boardQuery.data.organizationId}` : "/"}
-          className="mb-2 inline-block text-sm text-gray-400 hover:text-gray-200"
-        >
-          Back to boards
-        </Link>
-        {boardQuery.isSuccess && (
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold">{boardQuery.data.name}</h1>
-            {boardQuery.data.description && (
-              <p className="mt-1 text-sm text-gray-400">{boardQuery.data.description}</p>
+            <Link
+              href={boardQuery.data ? `/organizations/${boardQuery.data.organizationId}` : "/"}
+              className="mb-2 inline-block text-sm text-gray-400 hover:text-gray-200"
+            >
+              Back to boards
+            </Link>
+            {boardQuery.isSuccess && (
+              <div>
+                <h1 className="text-2xl font-bold">{boardQuery.data.name}</h1>
+                {boardQuery.data.description && (
+                  <p className="mt-1 text-sm text-gray-400">{boardQuery.data.description}</p>
+                )}
+              </div>
             )}
           </div>
-        )}
+          <button
+            onClick={() => setShowActivity(!showActivity)}
+            className={`shrink-0 rounded-md border px-3 py-1.5 text-sm ${
+              showActivity
+                ? "border-blue-600 bg-blue-600/20 text-blue-300"
+                : "border-gray-700 text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            Activity
+          </button>
+        </div>
       </header>
 
-      <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
-        {isLoading && <LoadingState />}
+      <div className="flex flex-1 overflow-hidden">
+        <div className="flex-1 overflow-x-auto overflow-y-hidden p-6">
+          {isLoading && <LoadingState />}
 
-        {hasError && (
-          <ErrorState
-            message="Could not load board data"
-            onRetry={() => {
-              boardQuery.refetch();
-              columnsQuery.refetch();
-              tasksQuery.refetch();
-            }}
-          />
-        )}
-
-        {columnsQuery.isSuccess && columnsQuery.data.length === 0 && !isLoading && (
-          <div className="flex gap-4">
-            <EmptyState
-              title="No columns yet"
-              description="Add columns to start organizing tasks."
+          {hasError && (
+            <ErrorState
+              message="Could not load board data"
+              onRetry={() => {
+                boardQuery.refetch();
+                columnsQuery.refetch();
+                tasksQuery.refetch();
+              }}
             />
-            <CreateColumnForm boardId={boardId} />
-          </div>
-        )}
+          )}
 
-        {columnsQuery.isSuccess && columnsQuery.data.length > 0 && (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCorners}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            <div className="flex gap-4" style={{ minWidth: "fit-content" }}>
-              {columnsQuery.data.map((column) => {
-                const columnTasks = tasksByColumn[column.id] ?? [];
-                const taskIds = columnTasks.map((t) => t.id);
-
-                return (
-                  <div
-                    key={column.id}
-                    className="flex w-80 shrink-0 flex-col rounded-lg border border-gray-800 bg-gray-900/50"
-                  >
-                    <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
-                      <h3 className="text-sm font-semibold text-gray-200">{column.name}</h3>
-                      <span className="text-xs text-gray-500">{columnTasks.length}</span>
-                    </div>
-
-                    <SortableContext
-                      items={taskIds}
-                      strategy={verticalListSortingStrategy}
-                      id={column.id}
-                    >
-                      <div className="flex-1 space-y-2 overflow-y-auto p-3 min-h-[60px]">
-                        {columnTasks.length === 0 && !activeTask && (
-                          <p className="py-4 text-center text-xs text-gray-600">No tasks</p>
-                        )}
-                        {columnTasks.map((task) => (
-                          <SortableTaskCard
-                            key={task.id}
-                            task={task}
-                            onTaskClick={handleTaskClick}
-                          />
-                        ))}
-                        <CreateTaskForm columnId={column.id} boardId={boardId} />
-                      </div>
-                    </SortableContext>
-                  </div>
-                );
-              })}
+          {columnsQuery.isSuccess && columnsQuery.data.length === 0 && !isLoading && (
+            <div className="flex gap-4">
+              <EmptyState
+                title="No columns yet"
+                description="Add columns to start organizing tasks."
+              />
               <CreateColumnForm boardId={boardId} />
             </div>
+          )}
 
-            <DragOverlay>
-              {activeTask ? (
-                <div className="w-80 rounded-md border border-blue-500 bg-gray-800 p-3 shadow-lg">
-                  <TaskCardContent task={activeTask} />
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+          {columnsQuery.isSuccess && columnsQuery.data.length > 0 && (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCorners}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <div className="flex gap-4" style={{ minWidth: "fit-content" }}>
+                {columnsQuery.data.map((column) => {
+                  const columnTasks = tasksByColumn[column.id] ?? [];
+                  const taskIds = columnTasks.map((t) => t.id);
+
+                  return (
+                    <div
+                      key={column.id}
+                      className="flex w-80 shrink-0 flex-col rounded-lg border border-gray-800 bg-gray-900/50"
+                    >
+                      <div className="flex items-center justify-between border-b border-gray-800 px-4 py-3">
+                        <h3 className="text-sm font-semibold text-gray-200">{column.name}</h3>
+                        <span className="text-xs text-gray-500">{columnTasks.length}</span>
+                      </div>
+
+                      <SortableContext
+                        items={taskIds}
+                        strategy={verticalListSortingStrategy}
+                        id={column.id}
+                      >
+                        <div className="flex-1 space-y-2 overflow-y-auto p-3 min-h-[60px]">
+                          {columnTasks.length === 0 && !activeTask && (
+                            <p className="py-4 text-center text-xs text-gray-600">No tasks</p>
+                          )}
+                          {columnTasks.map((task) => (
+                            <SortableTaskCard
+                              key={task.id}
+                              task={task}
+                              onTaskClick={handleTaskClick}
+                            />
+                          ))}
+                          <CreateTaskForm columnId={column.id} boardId={boardId} />
+                        </div>
+                      </SortableContext>
+                    </div>
+                  );
+                })}
+                <CreateColumnForm boardId={boardId} />
+              </div>
+
+              <DragOverlay>
+                {activeTask ? (
+                  <div className="w-80 rounded-md border border-blue-500 bg-gray-800 p-3 shadow-lg">
+                    <TaskCardContent task={activeTask} />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </div>
+
+        {showActivity && (
+          <div className="w-80 shrink-0 border-l border-gray-800 bg-gray-900/30">
+            <ActivityFeed boardId={boardId} />
+          </div>
         )}
       </div>
 
