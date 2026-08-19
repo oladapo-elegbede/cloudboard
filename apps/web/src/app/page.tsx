@@ -2,11 +2,18 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../contexts/auth-context";
+import { listOrganizations } from "../lib/organizations-api";
+import { ApiError } from "../lib/api-client";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
+import { EmptyState } from "../components/EmptyState";
 
-export default function HomePage() {
+export default function OrganizationsPage() {
   const router = useRouter();
-  const { status, user, logout } = useAuth();
+  const { status, accessToken, user, logout } = useAuth();
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -14,16 +21,18 @@ export default function HomePage() {
     }
   }, [status, router]);
 
-  if (status === "loading") {
+  const query = useQuery({
+    queryKey: ["organizations"],
+    queryFn: () => listOrganizations(accessToken as string),
+    enabled: status === "authenticated" && Boolean(accessToken),
+  });
+
+  if (status === "loading" || status === "unauthenticated") {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-400">Loading...</p>
+        <LoadingState />
       </main>
     );
-  }
-
-  if (status === "unauthenticated" || !user) {
-    return null;
   }
 
   const handleLogout = async () => {
@@ -32,47 +41,67 @@ export default function HomePage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <div className="w-full max-w-2xl space-y-8">
-        <div className="text-center">
-          <h1 className="text-5xl font-bold mb-4">CloudBoard</h1>
-          <p className="text-gray-400 text-lg">Welcome back, {user.name}</p>
-        </div>
-
-        <div className="border border-gray-800 rounded-lg p-6 bg-gray-900 space-y-4">
-          <h2 className="text-xl font-semibold">Your Account</h2>
-          <div className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-400">Name:</span>{" "}
-              <span className="text-white">{user.name}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">Email:</span>{" "}
-              <span className="text-white">{user.email}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">Email verified:</span>{" "}
-              <span className="text-white">{user.emailVerified ? "Yes" : "No"}</span>
-            </div>
-            <div>
-              <span className="text-gray-400">Account created:</span>{" "}
-              <span className="text-white">{new Date(user.createdAt).toLocaleString()}</span>
-            </div>
-            {user.lastLoginAt && (
-              <div>
-                <span className="text-gray-400">Last login:</span>{" "}
-                <span className="text-white">{new Date(user.lastLoginAt).toLocaleString()}</span>
-              </div>
-            )}
+    <main className="min-h-screen p-8">
+      <div className="mx-auto max-w-4xl space-y-8">
+        <header className="flex items-center justify-between border-b border-gray-800 pb-6">
+          <div>
+            <h1 className="text-3xl font-bold">CloudBoard</h1>
+            {user && <p className="mt-1 text-sm text-gray-400">Signed in as {user.name}</p>}
           </div>
-        </div>
+          <button
+            onClick={handleLogout}
+            className="rounded-md border border-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-900"
+          >
+            Log out
+          </button>
+        </header>
 
-        <button
-          onClick={handleLogout}
-          className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors"
-        >
-          Log out
-        </button>
+        <section>
+          <h2 className="mb-4 text-xl font-semibold">Your organizations</h2>
+
+          {query.isLoading && <LoadingState />}
+
+          {query.isError && (
+            <ErrorState
+              message={
+                query.error instanceof ApiError
+                  ? query.error.message
+                  : "Could not load your organizations"
+              }
+              onRetry={() => query.refetch()}
+            />
+          )}
+
+          {query.isSuccess && query.data.length === 0 && (
+            <EmptyState
+              title="No organizations yet"
+              description="You have not been added to any organizations."
+            />
+          )}
+
+          {query.isSuccess && query.data.length > 0 && (
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {query.data.map((org) => (
+                <li key={org.id}>
+                  <Link
+                    href={`/organizations/${org.id}`}
+                    className="block rounded-lg border border-gray-800 bg-gray-900 p-6 transition-colors hover:border-gray-700 hover:bg-gray-900/60"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-lg font-semibold text-white">{org.name}</p>
+                        <p className="mt-1 truncate text-xs text-gray-500">{org.slug}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full border border-gray-700 px-2 py-0.5 text-xs uppercase tracking-wide text-gray-400">
+                        {org.role}
+                      </span>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
     </main>
   );

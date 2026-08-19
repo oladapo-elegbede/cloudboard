@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:3000/api/v1";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api/v1";
 
 export interface ApiSuccessResponse<T> {
   success: true;
@@ -34,10 +34,26 @@ interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   accessToken?: string | null;
+  query?: Record<string, string | number | boolean | undefined>;
 }
 
+const buildQueryString = (
+  query?: Record<string, string | number | boolean | undefined>,
+): string => {
+  if (!query) return "";
+  const params = new URLSearchParams();
+  Object.entries(query).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      params.append(key, String(value));
+    }
+  });
+  const queryString = params.toString();
+  return queryString ? `?${queryString}` : "";
+};
+
 export const apiRequest = async <T>(path: string, options: RequestOptions = {}): Promise<T> => {
-  const url = `${API_BASE_URL}${path}`;
+  const queryString = buildQueryString(options.query);
+  const url = `${API_BASE_URL}${path}${queryString}`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
