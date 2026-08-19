@@ -12,7 +12,7 @@ import {
   useSensors,
   DragOverlay,
 } from "@dnd-kit/core";
-import type { DragStartEvent, DragEndEvent, DragOverEvent } from "@dnd-kit/core";
+import type { DragStartEvent, DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useAuth } from "../../../contexts/auth-context";
@@ -25,6 +25,7 @@ import { ErrorState } from "../../../components/ErrorState";
 import { EmptyState } from "../../../components/EmptyState";
 import { CreateColumnForm } from "../../../components/CreateColumnForm";
 import { CreateTaskForm } from "../../../components/CreateTaskForm";
+import { TaskDetailModal } from "../../../components/TaskDetailModal";
 import type { PublicTask, TaskPriority } from "../../../lib/boards-api";
 
 const priorityConfig: Record<string, { label: string; className: string }> = {
@@ -88,7 +89,13 @@ const TaskCardContent = ({ task }: { task: PublicTask }) => {
   );
 };
 
-const SortableTaskCard = ({ task }: { task: PublicTask }) => {
+const SortableTaskCard = ({
+  task,
+  onTaskClick,
+}: {
+  task: PublicTask;
+  onTaskClick: (task: PublicTask) => void;
+}) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: "task", task },
@@ -100,12 +107,19 @@ const SortableTaskCard = ({ task }: { task: PublicTask }) => {
     opacity: isDragging ? 0.4 : 1,
   };
 
+  const handleClick = () => {
+    if (!isDragging) {
+      onTaskClick(task);
+    }
+  };
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
+      onClick={handleClick}
       className="cursor-grab rounded-md border border-gray-700 bg-gray-800 p-3 shadow-sm active:cursor-grabbing"
     >
       <TaskCardContent task={task} />
@@ -120,6 +134,7 @@ export default function BoardDetailPage() {
   const { status, accessToken } = useAuth();
   const queryClient = useQueryClient();
   const [activeTask, setActiveTask] = useState<PublicTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<PublicTask | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -205,7 +220,6 @@ export default function BoardDetailPage() {
       if (!activeTaskData || activeTaskData.type !== "task") return;
 
       const draggedTask = activeTaskData.task as PublicTask;
-      const overId = over.id as string;
       const overData = over.data.current;
 
       let targetColumnId: string | undefined;
@@ -227,7 +241,7 @@ export default function BoardDetailPage() {
         }
         beforeTaskId = overTask.id !== draggedTask.id ? overTask.id : undefined;
       } else if (overData?.type === "column") {
-        const columnId = overId;
+        const columnId = over.id as string;
         if (columnId !== draggedTask.columnId) {
           targetColumnId = columnId;
         }
@@ -244,6 +258,10 @@ export default function BoardDetailPage() {
     },
     [tasksByColumn, moveMutation],
   );
+
+  const handleTaskClick = useCallback((task: PublicTask) => {
+    setSelectedTask(task);
+  }, []);
 
   if (status === "loading" || status === "unauthenticated") {
     return (
@@ -353,7 +371,11 @@ export default function BoardDetailPage() {
                           <p className="py-4 text-center text-xs text-gray-600">No tasks</p>
                         )}
                         {columnTasks.map((task) => (
-                          <SortableTaskCard key={task.id} task={task} />
+                          <SortableTaskCard
+                            key={task.id}
+                            task={task}
+                            onTaskClick={handleTaskClick}
+                          />
                         ))}
                         <CreateTaskForm columnId={column.id} boardId={boardId} />
                       </div>
@@ -374,6 +396,10 @@ export default function BoardDetailPage() {
           </DndContext>
         )}
       </div>
+
+      {selectedTask && (
+        <TaskDetailModal task={selectedTask} onClose={() => setSelectedTask(null)} />
+      )}
     </main>
   );
 }
