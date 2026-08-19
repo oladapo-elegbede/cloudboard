@@ -168,6 +168,11 @@ export const listColumnTasks = async (columnId: string): Promise<PublicTask[]> =
   return tasks.map(toPublicTask);
 };
 
+export const listBoardTasks = async (boardId: string): Promise<PublicTask[]> => {
+  const tasks = await taskRepository.findTasksByBoardId(boardId);
+  return tasks.map(toPublicTask);
+};
+
 export const getTask = async (taskId: string): Promise<PublicTask> => {
   const task = await taskRepository.findTaskById(taskId);
   if (!task) {

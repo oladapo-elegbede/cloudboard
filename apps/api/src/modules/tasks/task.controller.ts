@@ -3,6 +3,7 @@ import { createTaskSchema, updateTaskSchema, moveTaskSchema } from "./task.schem
 import {
   createTask,
   listColumnTasks,
+  listBoardTasks,
   getTask,
   updateTask,
   moveTask,
@@ -114,6 +115,18 @@ export const handleListTasks = async (req: Request, res: Response): Promise<void
     res.status(200).json({ success: true, data: { tasks } });
   } catch (error) {
     sendInternalError(res, error, "List tasks failed");
+  }
+};
+
+export const handleListBoardTasks = async (req: Request, res: Response): Promise<void> => {
+  const boardId = getStringParam(req, res, "id");
+  if (!boardId) return;
+
+  try {
+    const tasks = await listBoardTasks(boardId);
+    res.status(200).json({ success: true, data: { tasks } });
+  } catch (error) {
+    sendInternalError(res, error, "List board tasks failed");
   }
 };
 
