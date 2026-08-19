@@ -39,6 +39,15 @@ export interface ListBoardTasksResponse {
   tasks: PublicTask[];
 }
 
+export interface CreateBoardResponse {
+  board: PublicBoard;
+}
+
+export interface CreateBoardInput {
+  name: string;
+  description?: string;
+}
+
 interface ListBoardsOptions {
   includeArchived?: boolean;
 }
@@ -75,4 +84,17 @@ export const listBoardTasks = async (
     accessToken,
   });
   return result.tasks;
+};
+
+export const createBoard = async (
+  accessToken: string,
+  organizationId: string,
+  input: CreateBoardInput,
+): Promise<PublicBoard> => {
+  const result = await apiRequest<CreateBoardResponse>(`/organizations/${organizationId}/boards`, {
+    method: "POST",
+    accessToken,
+    body: input,
+  });
+  return result.board;
 };

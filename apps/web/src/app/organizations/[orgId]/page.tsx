@@ -11,6 +11,7 @@ import { ApiError } from "../../../lib/api-client";
 import { LoadingState } from "../../../components/LoadingState";
 import { ErrorState } from "../../../components/ErrorState";
 import { EmptyState } from "../../../components/EmptyState";
+import { CreateBoardForm } from "../../../components/CreateBoardForm";
 
 export default function OrganizationBoardsPage() {
   const router = useRouter();
@@ -113,7 +114,7 @@ export default function OrganizationBoardsPage() {
           {boardsQuery.isSuccess && boardsQuery.data.length === 0 && (
             <EmptyState
               title="No boards yet"
-              description="Boards you create in this organization will appear here."
+              description="Create your first board to start organizing work."
             />
           )}
 
@@ -137,6 +138,10 @@ export default function OrganizationBoardsPage() {
               ))}
             </ul>
           )}
+
+          <div className="mt-4">
+            <CreateBoardForm organizationId={orgId} />
+          </div>
         </section>
       </div>
     </main>
