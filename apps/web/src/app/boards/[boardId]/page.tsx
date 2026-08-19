@@ -11,6 +11,8 @@ import { ApiError } from "../../../lib/api-client";
 import { LoadingState } from "../../../components/LoadingState";
 import { ErrorState } from "../../../components/ErrorState";
 import { EmptyState } from "../../../components/EmptyState";
+import { CreateColumnForm } from "../../../components/CreateColumnForm";
+import { CreateTaskForm } from "../../../components/CreateTaskForm";
 import type { PublicTask, TaskPriority } from "../../../lib/boards-api";
 
 const priorityConfig: Record<string, { label: string; className: string }> = {
@@ -185,10 +187,13 @@ export default function BoardDetailPage() {
         )}
 
         {columnsQuery.isSuccess && columnsQuery.data.length === 0 && !isLoading && (
-          <EmptyState
-            title="No columns yet"
-            description="Add columns to start organizing tasks on this board."
-          />
+          <div className="flex gap-4">
+            <EmptyState
+              title="No columns yet"
+              description="Add columns to start organizing tasks."
+            />
+            <CreateColumnForm boardId={boardId} />
+          </div>
         )}
 
         {columnsQuery.isSuccess && columnsQuery.data.length > 0 && (
@@ -212,10 +217,12 @@ export default function BoardDetailPage() {
                     {columnTasks.map((task) => (
                       <TaskCard key={task.id} task={task} />
                     ))}
+                    <CreateTaskForm columnId={column.id} boardId={boardId} />
                   </div>
                 </div>
               );
             })}
+            <CreateColumnForm boardId={boardId} />
           </div>
         )}
       </div>
