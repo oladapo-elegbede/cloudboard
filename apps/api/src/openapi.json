@@ -1,0 +1,674 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "CloudBoard API",
+    "description": "A production-grade team collaboration platform with Kanban boards.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Oladapo Elegbede",
+      "url": "https://github.com/oladapo-elegbede/cloudboard"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    { "name": "Auth", "description": "Authentication and session management" },
+    { "name": "Users", "description": "User profile" },
+    { "name": "Organizations", "description": "Multi-tenant workspaces" },
+    { "name": "Boards", "description": "Kanban boards" },
+    { "name": "Columns", "description": "Board columns with ordering" },
+    { "name": "Tasks", "description": "Tasks with priority and positioning" },
+    { "name": "Comments", "description": "Task discussions" },
+    { "name": "Activities", "description": "Audit trail" }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Register a new user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "name"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 8 },
+                  "name": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "400": { "description": "Validation error" },
+          "409": { "description": "Email already exists" }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Log in with credentials",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Refresh access token using HttpOnly cookie",
+        "responses": {
+          "200": { "description": "New access token issued" },
+          "401": { "description": "Invalid or expired refresh token" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Log out and revoke refresh token",
+        "responses": {
+          "200": { "description": "Logged out successfully" }
+        }
+      }
+    },
+    "/users/me": {
+      "get": {
+        "tags": ["Users"],
+        "summary": "Get current user profile",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "User profile returned" },
+          "401": { "description": "Not authenticated" }
+        }
+      }
+    },
+    "/organizations": {
+      "get": {
+        "tags": ["Organizations"],
+        "summary": "List user organizations",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of organizations with user role" }
+        }
+      },
+      "post": {
+        "tags": ["Organizations"],
+        "summary": "Create a new organization",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Organization created" }
+        }
+      }
+    },
+    "/organizations/{orgId}": {
+      "get": {
+        "tags": ["Organizations"],
+        "summary": "Get organization details",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Organization details with user role" },
+          "403": { "description": "Not a member" }
+        }
+      }
+    },
+    "/organizations/{orgId}/members": {
+      "get": {
+        "tags": ["Organizations"],
+        "summary": "List organization members",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "List of members with roles" }
+        }
+      },
+      "post": {
+        "tags": ["Organizations"],
+        "summary": "Invite a member (Admin+)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "role"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "role": { "type": "string", "enum": ["ADMIN", "MEMBER", "VIEWER"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Member invited" },
+          "403": { "description": "Insufficient role" },
+          "409": { "description": "Already a member" }
+        }
+      }
+    },
+    "/organizations/{orgId}/boards": {
+      "get": {
+        "tags": ["Boards"],
+        "summary": "List boards in organization",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "includeArchived",
+            "in": "query",
+            "schema": { "type": "boolean", "default": false }
+          }
+        ],
+        "responses": {
+          "200": { "description": "List of boards" }
+        }
+      },
+      "post": {
+        "tags": ["Boards"],
+        "summary": "Create a board (Member+)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "orgId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Board created" }
+        }
+      }
+    },
+    "/boards/{boardId}": {
+      "get": {
+        "tags": ["Boards"],
+        "summary": "Get board details",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Board details" },
+          "404": { "description": "Board not found" }
+        }
+      },
+      "patch": {
+        "tags": ["Boards"],
+        "summary": "Update board (Member+)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Board updated" }
+        }
+      },
+      "delete": {
+        "tags": ["Boards"],
+        "summary": "Delete board permanently (Admin+, must be archived)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Board deleted" },
+          "400": { "description": "Board must be archived first" }
+        }
+      }
+    },
+    "/boards/{boardId}/columns": {
+      "get": {
+        "tags": ["Columns"],
+        "summary": "List columns on a board (ordered by position)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "List of columns" }
+        }
+      },
+      "post": {
+        "tags": ["Columns"],
+        "summary": "Create a column (Member+)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "afterColumnId": { "type": "string", "format": "uuid" },
+                  "beforeColumnId": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Column created" }
+        }
+      }
+    },
+    "/boards/{boardId}/tasks": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "List all tasks on a board (bulk fetch)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "All tasks grouped by column" }
+        }
+      }
+    },
+    "/columns/{columnId}/tasks": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "List tasks in a column",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "columnId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Tasks in column ordered by position" }
+        }
+      },
+      "post": {
+        "tags": ["Tasks"],
+        "summary": "Create a task (Member+)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "columnId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                  "title": { "type": "string" },
+                  "description": { "type": "string" },
+                  "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+                  "dueDate": { "type": "string", "format": "date-time" },
+                  "assigneeId": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Task created" }
+        }
+      }
+    },
+    "/tasks/{taskId}": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "Get task details",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Task details" }
+        }
+      },
+      "patch": {
+        "tags": ["Tasks"],
+        "summary": "Update task (Member+)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Task updated" }
+        }
+      },
+      "delete": {
+        "tags": ["Tasks"],
+        "summary": "Delete task (Member+)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Task deleted" }
+        }
+      }
+    },
+    "/tasks/{taskId}/move": {
+      "post": {
+        "tags": ["Tasks"],
+        "summary": "Move task (reorder or cross-column)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetColumnId": { "type": "string", "format": "uuid" },
+                  "afterTaskId": { "type": "string", "format": "uuid" },
+                  "beforeTaskId": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Task moved" }
+        }
+      }
+    },
+    "/tasks/{taskId}/comments": {
+      "get": {
+        "tags": ["Comments"],
+        "summary": "List comments on a task",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Comments in chronological order" }
+        }
+      },
+      "post": {
+        "tags": ["Comments"],
+        "summary": "Add a comment (Member+)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "taskId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["body"],
+                "properties": {
+                  "body": { "type": "string", "maxLength": 10000 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Comment added" }
+        }
+      }
+    },
+    "/comments/{commentId}": {
+      "patch": {
+        "tags": ["Comments"],
+        "summary": "Edit own comment",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Comment updated" },
+          "403": { "description": "Not the comment author" }
+        }
+      },
+      "delete": {
+        "tags": ["Comments"],
+        "summary": "Delete comment (author or Admin+)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "commentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Comment deleted" },
+          "403": { "description": "Insufficient permission" }
+        }
+      }
+    },
+    "/boards/{boardId}/activities": {
+      "get": {
+        "tags": ["Activities"],
+        "summary": "List board activity feed",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "boardId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 50, "maximum": 200 }
+          },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Paginated activity feed (snapshots stripped for VIEWER role)" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "data": {
+            "type": "object",
+            "properties": {
+              "user": { "$ref": "#/components/schemas/PublicUser" },
+              "accessToken": { "type": "string" }
+            }
+          }
+        }
+      },
+      "PublicUser": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "name": { "type": "string" },
+          "emailVerified": { "type": "boolean" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "lastLoginAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      }
+    }
+  }
+}
