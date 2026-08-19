@@ -10,6 +10,7 @@ export type {
 export {
   createTask,
   listColumnTasks,
+  listBoardTasks,
   getTask,
   updateTask,
   moveTask,
@@ -21,4 +22,4 @@ export {
 } from "./task.service.js";
 
 export { requireTaskAccess, requireTaskRole } from "./task.middleware.js";
-export { columnTaskRouter, taskRouter } from "./task.routes.js";
+export { columnTaskRouter, boardTaskRouter, taskRouter } from "./task.routes.js";

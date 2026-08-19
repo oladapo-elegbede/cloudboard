@@ -39,6 +39,17 @@ export const findTasksByColumn = async (columnId: string): Promise<Task[]> => {
   });
 };
 
+export const findTasksByBoardId = async (boardId: string): Promise<Task[]> => {
+  return prisma.task.findMany({
+    where: {
+      column: {
+        boardId,
+      },
+    },
+    orderBy: [{ columnId: "asc" }, { position: "asc" }],
+  });
+};
+
 export const findLastTaskByColumn = async (columnId: string): Promise<Task | null> => {
   return prisma.task.findFirst({
     where: { columnId },

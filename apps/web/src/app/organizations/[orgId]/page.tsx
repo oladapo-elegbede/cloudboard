@@ -121,7 +121,10 @@ export default function OrganizationBoardsPage() {
             <ul className="grid gap-4 sm:grid-cols-2">
               {boardsQuery.data.map((board) => (
                 <li key={board.id}>
-                  <div className="block rounded-lg border border-gray-800 bg-gray-900 p-6">
+                  <Link
+                    href={`/boards/${board.id}`}
+                    className="block rounded-lg border border-gray-800 bg-gray-900 p-6 transition-colors hover:border-gray-700 hover:bg-gray-900/60"
+                  >
                     <p className="truncate text-lg font-semibold text-white">{board.name}</p>
                     {board.description && (
                       <p className="mt-2 line-clamp-2 text-sm text-gray-400">{board.description}</p>
@@ -129,7 +132,7 @@ export default function OrganizationBoardsPage() {
                     <p className="mt-3 text-xs text-gray-500">
                       Created {new Date(board.createdAt).toLocaleDateString()}
                     </p>
-                  </div>
+                  </Link>
                 </li>
               ))}
             </ul>
