@@ -2,10 +2,12 @@
 
 [![CI/CD Pipeline](https://github.com/oladapo-elegbede/cloudboard/actions/workflows/ci.yml/badge.svg)](https://github.com/oladapo-elegbede/cloudboard/actions)
 
-🌐 **Live Demo:** [https://cloudboard-web.vercel.app](https://cloudboard-web.vercel.app)  
-📖 **API Documentation (Swagger):** [https://cloudboard-api.onrender.com/api-docs](https://cloudboard-api.onrender.com/api-docs)
+ðŸŒ **Live Demo:** [https://cloudboard-web.vercel.app](https://cloudboard-web.vercel.app)  
+ðŸ“– **API Documentation (Swagger):** [https://cloudboard-api.onrender.com/api-docs](https://cloudboard-api.onrender.com/api-docs)
 
----## Features
+---
+
+## Features
 
 **Authentication**
 
@@ -339,16 +341,16 @@ text
 
 ## Sprint Progress
 
-**Sprint 1 Ã¢â‚¬â€ Foundation (COMPLETE)**
+**Sprint 1 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Foundation (COMPLETE)**
 Repository setup, backend scaffold, Docker, Prisma, ESLint, Prettier, Husky, Next.js frontend
 
-**Sprint 2 Ã¢â‚¬â€ Authentication (COMPLETE)**
+**Sprint 2 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Authentication (COMPLETE)**
 User model, JWT tokens, registration, login, refresh, logout, middleware, frontend auth UI, organizations, memberships, role-based access control
 
-**Sprint 3 Ã¢â‚¬â€ Kanban Features (COMPLETE)**
+**Sprint 3 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Kanban Features (COMPLETE)**
 Boards, columns, tasks with fractional indexing, drag-and-drop, comments, activity logging, full frontend Kanban UI
 
-**Sprint 4 Ã¢â‚¬â€ Deployment (IN PROGRESS)**
+**Sprint 4 ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Deployment (IN PROGRESS)**
 Production Dockerfile, unit testing, CI/CD, documentation
 
 ---
@@ -374,7 +376,7 @@ Complete infrastructure code is defined using AWS CDK in `infrastructure/stack.t
 
 All four development sprints complete:
 
-- âœ… **Sprint 1 â€” Foundation** (Monorepo, Express, Docker, Prisma, Next.js, Quality tooling)
-- âœ… **Sprint 2 â€” Authentication & Authorization** (JWT rotation, bcrypt, multi-tenancy, RBAC, frontend auth)
-- âœ… **Sprint 3 â€” Kanban Features** (Boards, columns, tasks, drag-and-drop, comments, activity logging)
-- âœ… **Sprint 4 â€” Deployment & Production** (Multi-stage Docker, unit tests, CI/CD pipeline, OpenAPI docs, AWS CDK)
+- Ã¢Å“â€¦ **Sprint 1 Ã¢â‚¬â€ Foundation** (Monorepo, Express, Docker, Prisma, Next.js, Quality tooling)
+- Ã¢Å“â€¦ **Sprint 2 Ã¢â‚¬â€ Authentication & Authorization** (JWT rotation, bcrypt, multi-tenancy, RBAC, frontend auth)
+- Ã¢Å“â€¦ **Sprint 3 Ã¢â‚¬â€ Kanban Features** (Boards, columns, tasks, drag-and-drop, comments, activity logging)
+- Ã¢Å“â€¦ **Sprint 4 Ã¢â‚¬â€ Deployment & Production** (Multi-stage Docker, unit tests, CI/CD pipeline, OpenAPI docs, AWS CDK)
