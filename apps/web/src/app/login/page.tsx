@@ -58,41 +58,43 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-8">
+    <main className="flex min-h-screen items-center justify-center p-8 bg-gray-950">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-4xl font-bold mb-2">CloudBoard</h1>
+          <h1 className="text-4xl font-bold mb-2 text-white">CloudBoard</h1>
           <p className="text-gray-400">Sign in to your account</p>
         </div>
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="space-y-4 border border-gray-800 rounded-lg p-6 bg-gray-900"
+          className="space-y-4 border border-gray-800 rounded-lg p-6 bg-gray-900 shadow-xl"
         >
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
+            <label htmlFor="email" className="block text-sm font-medium mb-1 text-gray-200">
               Email
             </label>
             <input
               id="email"
               type="email"
               autoComplete="email"
+              placeholder="you@example.com"
               {...register("email")}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             {errors.email && <p className="mt-1 text-sm text-red-400">{errors.email.message}</p>}
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
+            <label htmlFor="password" className="block text-sm font-medium mb-1 text-gray-200">
               Password
             </label>
             <input
               id="password"
               type="password"
               autoComplete="current-password"
+              placeholder="••••••••"
               {...register("password")}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:border-blue-500"
+              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
             {errors.password && (
               <p className="mt-1 text-sm text-red-400">{errors.password.message}</p>
@@ -100,7 +102,7 @@ export default function LoginPage() {
           </div>
 
           {submitError && (
-            <div className="p-3 bg-red-950 border border-red-800 rounded-md text-sm text-red-300">
+            <div className="p-3 bg-red-950/80 border border-red-800 rounded-md text-sm text-red-300">
               {submitError}
             </div>
           )}
@@ -108,7 +110,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
+            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors"
           >
             {isSubmitting ? "Signing in..." : "Sign in"}
           </button>
@@ -116,7 +118,7 @@ export default function LoginPage() {
 
         <p className="text-center text-sm text-gray-400">
           Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-blue-400 hover:text-blue-300">
+          <Link href="/register" className="text-blue-400 hover:text-blue-300 font-medium">
             Register
           </Link>
         </p>
