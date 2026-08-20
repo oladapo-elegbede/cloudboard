@@ -340,16 +340,16 @@ text
 
 ## Sprint Progress
 
-**Sprint 1 — Foundation (COMPLETE)**
+**Sprint 1 â€” Foundation (COMPLETE)**
 Repository setup, backend scaffold, Docker, Prisma, ESLint, Prettier, Husky, Next.js frontend
 
-**Sprint 2 — Authentication (COMPLETE)**
+**Sprint 2 â€” Authentication (COMPLETE)**
 User model, JWT tokens, registration, login, refresh, logout, middleware, frontend auth UI, organizations, memberships, role-based access control
 
-**Sprint 3 — Kanban Features (COMPLETE)**
+**Sprint 3 â€” Kanban Features (COMPLETE)**
 Boards, columns, tasks with fractional indexing, drag-and-drop, comments, activity logging, full frontend Kanban UI
 
-**Sprint 4 — Deployment (IN PROGRESS)**
+**Sprint 4 â€” Deployment (IN PROGRESS)**
 Production Dockerfile, unit testing, CI/CD, documentation
 
 ---
@@ -357,3 +357,25 @@ Production Dockerfile, unit testing, CI/CD, documentation
 ## License
 
 Private project. No license granted for reuse at this time.
+
+---
+
+## Deployment & Infrastructure
+
+CloudBoard is designed for zero-downtime deployment on AWS using ECS Fargate, RDS PostgreSQL, and ALB.
+
+Complete infrastructure code is defined using AWS CDK in `infrastructure/stack.ts`.
+
+- **Deployment Guide:** See [docs/deployment.md](./docs/deployment.md) for step-by-step deployment instructions.
+- **Cost Estimation:** See [docs/cost-estimation.md](./docs/cost-estimation.md) for monthly AWS cost breakdown.
+
+---
+
+## Final Project Status
+
+All four development sprints complete:
+
+- ✅ **Sprint 1 — Foundation** (Monorepo, Express, Docker, Prisma, Next.js, Quality tooling)
+- ✅ **Sprint 2 — Authentication & Authorization** (JWT rotation, bcrypt, multi-tenancy, RBAC, frontend auth)
+- ✅ **Sprint 3 — Kanban Features** (Boards, columns, tasks, drag-and-drop, comments, activity logging)
+- ✅ **Sprint 4 — Deployment & Production** (Multi-stage Docker, unit tests, CI/CD pipeline, OpenAPI docs, AWS CDK)

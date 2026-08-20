@@ -5,7 +5,8 @@
   "description": "A production-grade team collaboration platform",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "infrastructure"
   ],
   "scripts": {
     "lint": "eslint .",
